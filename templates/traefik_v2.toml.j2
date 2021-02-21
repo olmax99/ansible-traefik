@@ -4,6 +4,7 @@
 # Optional
 # Default: ["http"]
 #
+# defaultEntryPoints = ["http", "https"]
 defaultEntryPoints = ["http"]
 
 # Entrypoints definition
@@ -13,14 +14,29 @@ defaultEntryPoints = ["http"]
 [entryPoints]
     [entryPoints.http]
     address = "{{ traefik_bind_ip }}:80"
+        [entryPoints.http.redirect]
+        entryPoint = "https"
+    [entryPoints.https]
+    address = "{{ traefik_bind_ip }}:443"
+        [entryPoints.https.tls]
     [entryPoints.traefik]
     address = "{{ traefik_bind_ip }}:8081"
 
 logLevel = "INFO"
 
+{% if traefik_logs | bool == True %}
+[traefikLog]
+  filePath = "/var/log/traefik.log"
+  format   = "json"
+
+[accessLog]
+filePath = "/var/log/access.log"
+format = "json"
+{% endif %}
+
 [docker]
 endpoint = "unix:///var/run/docker.sock"
-domain = "consul"
+domain = "{{ traefik_domain }}"
 watch = true
 
 [consul]
@@ -30,12 +46,35 @@ prefix = "traefik"
 
 [consulCatalog]
 endpoint = "{{ traefik_consul_master }}:8500"
-domain = "service.consul"
+domain = "{{ traefik_domain }}"
 exposedByDefault = true
 prefix = "traefik"
 
 # Activate API and Dashboard
 [api]
-  entryPoint = "traefik"
-  dashboard = true
-  debug = true
+entryPoint = "traefik"
+dashboard = true
+debug = true
+
+# cert-manager (let's encrypt) integration
+[acme]
+email = "{{ traefik_acme_email }}"
+# 'traefik/acme/account' if using KV store.
+storage = "traefik/acme/account"
+onHostRule = false
+acmeLogging = true
+entryPoint = "https"
+
+# caServer = "https://acme-staging-v02.api.letsencrypt.org/directory"
+caServer = "https://acme-v02.api.letsencrypt.org/directory"
+
+{% if traefik_use_acme_route53 | bool == True %}
+# https://letsencrypt.org/docs/challenge-types/
+[acme.dnsChallenge]
+  provider = "route53"
+  delayBeforeCheck = 0
+
+[[acme.domains]]
+  main = "*.{{ traefik_domain}}"
+  sans = {{ traefik_acme_sans }}
+{% endif %}

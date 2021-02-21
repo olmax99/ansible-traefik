@@ -8,3 +8,9 @@ traefik_template: traefik.toml
 traefik_systemd_unit_template: traefik.service
 traefik_systemd_unit_dest: /etc/systemd/system/traefik.service
 traefik_update: no
+
+traefik_logs: no
+traefik_domain: "service.consul"
+traefik_use_acme_route53: no
+traefik_acme_email: "example@domain.com"
+traefik_acme_sans: []
